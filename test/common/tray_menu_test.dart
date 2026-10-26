@@ -44,6 +44,7 @@ HotKeyAction _bind(HotAction action, PhysicalKeyboardKey key) {
 
 TrayState _trayState({
   bool isStart = false,
+  bool suspended = false,
   bool tunEnable = false,
   bool systemProxy = false,
   bool autoLaunch = false,
@@ -61,6 +62,7 @@ TrayState _trayState({
     systemProxy: systemProxy,
     tunEnable: tunEnable,
     isStart: isStart,
+    suspended: suspended,
     groups: groups,
     selectedMap: const {},
     showTrayTitle: showTrayTitle,
@@ -260,6 +262,41 @@ void main() {
       isFalse,
     );
   });
+
+  for (final monochrome in [true, false]) {
+    test('macOS 单色选项为 $monochrome 时，关闭和暂停显示灰色，恢复后还原图标', () async {
+      final activePath = monochrome
+          ? 'assets/images/tray/macos/status_1.png'
+          : 'assets/images/tray/unix/status_2.png';
+      for (final (isStart, suspended, path) in [
+        (true, false, activePath),
+        (false, false, 'assets/images/tray/macos/status_inactive.png'),
+        (true, false, activePath),
+        (true, true, 'assets/images/tray/macos/status_inactive.png'),
+        (true, false, activePath),
+      ]) {
+        await update(
+          _trayState(
+            isStart: isStart,
+            suspended: suspended,
+            monochromeTrayIcon: monochrome,
+          ),
+        );
+
+        final icon = (showCall()!.arguments as Map)['icon'] as Map;
+        expect(icon['isTemplate'], monochrome && isStart && !suspended);
+        final reps = (icon['reps'] as List).cast<Map>();
+        for (final rep in reps) {
+          final scale = (rep['scale'] as num).toInt();
+          final variant = scale == 1
+              ? path
+              : path.replaceFirst('/status_', '/$scale.0x/status_');
+          expect(rep['bytes'], base64Encode(File(variant).readAsBytesSync()));
+        }
+        expect(reps, hasLength(4));
+      }
+    });
+  }
 
   test('skips the platform call when the tray state is unchanged', () async {
     await update(_trayState(isStart: true));
