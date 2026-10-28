@@ -61,7 +61,7 @@ class AppTray implements TrayPort {
     bool monochrome = true,
   }) {
     if (isMacOS && !isStart && !safeMode) {
-      return '${_trayIconDir(monochrome)}/status_inactive.png';
+      return 'assets/images/tray/macos/status_inactive.png';
     }
     final status = switch ((
       safeMode,
